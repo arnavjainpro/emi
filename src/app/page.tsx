@@ -119,22 +119,14 @@ export default function Home() {
             {/* Right: Hero Image/Illustration */}
             <div className="relative hidden lg:block">
               <div className="relative">
-                {/* Main card */}
+                {/* Main card - Doctor Team Image */}
                 <div className="premium-card p-8">
-                  <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center overflow-hidden">
-                    <div className="text-center p-8">
-                      <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[#0055A4] to-[#0066CC] flex items-center justify-center shadow-xl shadow-blue-200">
-                        <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <p className="text-[#0055A4] font-semibold text-lg">
-                        Your Care Team Awaits
-                      </p>
-                      <p className="text-slate-500 text-sm mt-2">
-                        Licensed providers ready to help
-                      </p>
-                    </div>
+                  <div className="aspect-[4/3] rounded-xl overflow-hidden">
+                    <img 
+                      src="/doctors-team.jpg" 
+                      alt="Medical team of doctors in white coats discussing patient care in a modern hospital setting"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
 
