@@ -1,6 +1,18 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import {
+    startPresageMeasurement,
+    PresageSession,
+    SignalQuality,
+    isPresageConfigured,
+    getSignalQualityLabel,
+    getSignalQualityColor,
+} from "@/lib/presage";
+
+// Re-export types for convenience
+export type { SignalQuality };
+export { getSignalQualityLabel, getSignalQualityColor };
 
 /**
  * @description Vital signs data structure from Presage rPPG
@@ -35,6 +47,10 @@ interface UseVitalsReturn {
     isConnected: boolean;
     /** Whether vitals are currently being measured */
     isMeasuring: boolean;
+    /** Whether the system is calibrating */
+    isCalibrating: boolean;
+    /** Signal quality metrics from Presage */
+    signalQuality: SignalQuality;
     /** Any error that occurred */
     error: string | null;
     /** Connect to the camera and start measuring */
@@ -43,6 +59,8 @@ interface UseVitalsReturn {
     disconnect: () => void;
     /** Reset vitals data */
     reset: () => void;
+    /** Video element ref for camera preview */
+    videoRef: React.RefObject<HTMLVideoElement | null>;
 }
 
 /**
@@ -56,6 +74,18 @@ const INITIAL_VITALS: VitalsData = {
     stressLevel: null,
     hrv: null,
     lastUpdated: null,
+};
+
+/**
+ * @description Initial signal quality state
+ */
+const INITIAL_SIGNAL_QUALITY: SignalQuality = {
+    overall: 0,
+    faceDetected: false,
+    facePositionQuality: 0,
+    lightingQuality: 0,
+    motionStability: 0,
+    recommendation: null,
 };
 
 /**
@@ -90,10 +120,68 @@ export function useVitals(): UseVitalsReturn {
     const [vitals, setVitals] = useState<VitalsData>(INITIAL_VITALS);
     const [isConnected, setIsConnected] = useState(false);
     const [isMeasuring, setIsMeasuring] = useState(false);
+    const [isCalibrating, setIsCalibrating] = useState(false);
+    const [signalQuality, setSignalQuality] = useState<SignalQuality>(INITIAL_SIGNAL_QUALITY);
     const [error, setError] = useState<string | null>(null);
 
     const streamRef = useRef<MediaStream | null>(null);
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    const sessionRef = useRef<PresageSession | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+
+    /**
+     * Initialize Presage session once video element is ready
+     */
+    const initializePresage = useCallback(async (videoElement: HTMLVideoElement, stream: MediaStream) => {
+        try {
+            videoElement.srcObject = stream;
+            await videoElement.play();
+
+            // Initialize Presage SDK measurement session
+            const session = await startPresageMeasurement(videoElement, {
+                onVitalsUpdate: (presageVitals) => {
+                    setVitals({
+                        heartRate: presageVitals.heartRate,
+                        spO2: presageVitals.oxygenSaturation,
+                        respiratoryRate: presageVitals.respiratoryRate,
+                        bloodPressure: presageVitals.bloodPressure,
+                        stressLevel: presageVitals.stressLevel,
+                        hrv: presageVitals.hrv,
+                        lastUpdated: presageVitals.timestamp,
+                    });
+                },
+                onSignalQualityChange: (quality) => {
+                    setSignalQuality(quality);
+                },
+                onReady: () => {
+                    setIsCalibrating(false);
+                    setIsMeasuring(true);
+                },
+                onMeasurementStart: () => {
+                    setIsCalibrating(true);
+                },
+                onMeasurementStop: () => {
+                    setIsMeasuring(false);
+                    setIsCalibrating(false);
+                },
+                onError: (presageError) => {
+                    setError(presageError.message);
+                    console.error("Presage error:", presageError);
+                },
+                onFaceDetectionChange: (detected) => {
+                    if (!detected) {
+                        console.log("Face lost - pausing measurement");
+                    }
+                },
+            });
+
+            sessionRef.current = session;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to initialize Presage";
+            setError(message);
+            setIsCalibrating(false);
+            console.error("Presage initialization error:", err);
+        }
+    }, []);
 
     /**
      * Connect to the camera and initialize Presage SDK
@@ -101,6 +189,12 @@ export function useVitals(): UseVitalsReturn {
     const connect = useCallback(async () => {
         try {
             setError(null);
+            setIsCalibrating(true);
+
+            // Check if Presage is configured
+            if (!isPresageConfigured()) {
+                console.warn("Presage API key not configured. Running in simulation mode.");
+            }
 
             // Request camera access
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -114,70 +208,47 @@ export function useVitals(): UseVitalsReturn {
 
             streamRef.current = stream;
             setIsConnected(true);
-            setIsMeasuring(true);
 
-            // TODO: Initialize actual Presage SDK
-            // const presage = new PresageSDK({
-            //   apiKey: process.env.NEXT_PUBLIC_PRESAGE_API_KEY,
-            //   videoStream: stream,
-            //   onVitalsUpdate: (data) => {
-            //     setVitals({
-            //       heartRate: data.heartRate,
-            //       spO2: data.oxygenSaturation,
-            //       respiratoryRate: data.respiratoryRate,
-            //       bloodPressure: data.bloodPressure,
-            //       stressLevel: data.stress,
-            //       hrv: data.hrv,
-            //       lastUpdated: new Date(),
-            //     });
-            //   },
-            // });
-            // await presage.start();
-
-            // Simulated vitals for development
-            intervalRef.current = setInterval(() => {
-                setVitals({
-                    heartRate: 60 + Math.floor(Math.random() * 30),
-                    spO2: 95 + Math.floor(Math.random() * 5),
-                    respiratoryRate: 12 + Math.floor(Math.random() * 8),
-                    bloodPressure: {
-                        systolic: 110 + Math.floor(Math.random() * 30),
-                        diastolic: 70 + Math.floor(Math.random() * 15),
-                    },
-                    stressLevel: Math.floor(Math.random() * 100),
-                    hrv: 30 + Math.floor(Math.random() * 40),
-                    lastUpdated: new Date(),
-                });
-            }, 2000);
+            // Wait a tick for React to render the video element, then initialize
+            setTimeout(() => {
+                if (videoRef.current && streamRef.current) {
+                    initializePresage(videoRef.current, streamRef.current);
+                }
+            }, 100);
 
         } catch (err) {
             const message = err instanceof Error ? err.message : "Failed to connect camera";
             setError(message);
+            setIsCalibrating(false);
             console.error("Camera connection error:", err);
         }
-    }, []);
+    }, [initializePresage]);
 
     /**
      * Disconnect from the camera and stop measuring
      */
     const disconnect = useCallback(() => {
+        // Stop Presage session
+        if (sessionRef.current) {
+            sessionRef.current.stop();
+            sessionRef.current = null;
+        }
+
         // Stop the video stream
         if (streamRef.current) {
             streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
         }
 
-        // Clear the simulation interval
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
+        // Clear video element
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
         }
-
-        // TODO: Stop Presage SDK
-        // presage.stop();
 
         setIsConnected(false);
         setIsMeasuring(false);
+        setIsCalibrating(false);
+        setSignalQuality(INITIAL_SIGNAL_QUALITY);
     }, []);
 
     /**
@@ -185,6 +256,7 @@ export function useVitals(): UseVitalsReturn {
      */
     const reset = useCallback(() => {
         setVitals(INITIAL_VITALS);
+        setSignalQuality(INITIAL_SIGNAL_QUALITY);
         setError(null);
     }, []);
 
@@ -201,10 +273,13 @@ export function useVitals(): UseVitalsReturn {
         vitals,
         isConnected,
         isMeasuring,
+        isCalibrating,
+        signalQuality,
         error,
         connect,
         disconnect,
         reset,
+        videoRef,
     };
 }
 

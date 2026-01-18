@@ -18,8 +18,21 @@ import { TranscriptMessage, formatTranscriptForSynthesis } from "@/lib/elevenlab
  * ```
  */
 export function EmiTerminal() {
+<<<<<<< Updated upstream
     const { state, transcript, transition, addTranscriptEntry, reset } = useTriage();
     const { vitals, isConnected, connect, disconnect } = useVitals();
+=======
+    const { state, transcript, transition, reset } = useTriage();
+    const {
+        vitals,
+        isConnected,
+        isCalibrating,
+        signalQuality,
+        videoRef,
+        connect,
+        disconnect,
+    } = useVitals();
+>>>>>>> Stashed changes
     const [showReport, setShowReport] = useState(false);
     const [voiceTranscript, setVoiceTranscript] = useState<TranscriptMessage[]>([]);
 
@@ -94,6 +107,9 @@ export function EmiTerminal() {
                 <VitalMonitor
                     vitals={vitals}
                     isConnected={isConnected}
+                    isCalibrating={isCalibrating}
+                    signalQuality={signalQuality}
+                    videoRef={videoRef}
                     onConnect={connect}
                     onDisconnect={disconnect}
                 />
