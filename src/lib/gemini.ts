@@ -265,12 +265,17 @@ export async function generateClinicalReport(
         process.env.GOOGLE_GEMINI_API_KEY ||
         process.env.NEXT_PUBLIC_GOOGLE_GEMINI_API_KEY;
 
+    console.log("[Gemini] API Key present:", !!apiKey);
+    console.log("[Gemini] API Key length:", apiKey?.length);
+    console.log("[Gemini] Using model: gemini-2.0-flash");
+
     if (!apiKey) {
         console.warn("GOOGLE_GEMINI_API_KEY not configured. Using mock data.");
         return generateMockSOAPNote(transcript, vitals);
     }
 
     try {
+        console.log("[Gemini] Initializing Google Generative AI...");
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
             model: "gemini-2.0-flash",
@@ -309,9 +314,11 @@ Generate a complete SOAP note based on this information. Remember:
 - Make the Assessment specific to this patient's presentation
 - Provide actionable, specific Plan recommendations`;
 
+        console.log("[Gemini] Sending request to API...");
         const result = await model.generateContent(prompt);
         const response = result.response;
         const text = response.text();
+        console.log("[Gemini] Received response:", text.substring(0, 100) + "...");
 
         // Parse JSON response
         const soapNote: SOAPNote = JSON.parse(text);
@@ -360,6 +367,7 @@ Generate a complete SOAP note based on this information. Remember:
             soapNote.suggested_specialist = null;
         }
 
+        console.log("[Gemini] Successfully generated SOAP note");
         return soapNote;
     } catch (error) {
         console.error("Gemini API error:", error);

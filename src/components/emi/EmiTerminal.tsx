@@ -75,10 +75,10 @@ export function EmiTerminal() {
     }, [reset]);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* LEFT: Virtual Exam Room */}
-            <div className="space-y-4">
-                {/* Voice Interface */}
+        <div className="space-y-4">
+            {/* TOP ROW: Voice Interface & Vital Signs Monitor */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* LEFT: Virtual Exam Room with Voice Interface */}
                 <div className="trust-card">
                     <div className="px-4 py-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
@@ -96,7 +96,7 @@ export function EmiTerminal() {
                     </div>
                 </div>
 
-                {/* Vitals Monitor */}
+                {/* RIGHT: Vital Signs Monitor */}
                 <div className="trust-card">
                     <div className="px-4 py-3 border-b border-gray-200">
                         <h3 className="font-semibold text-gray-900">Vital Signs Monitor</h3>
@@ -117,10 +117,10 @@ export function EmiTerminal() {
                 </div>
             </div>
 
-            {/* RIGHT: Live Clinical Chart */}
-            <div className="space-y-4">
-                {/* Transcript */}
-                <div className="trust-card">
+            {/* BOTTOM ROW: Live Clinical Chart & Session Controls */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Live Clinical Chart - Takes up 2/3 width */}
+                <div className="lg:col-span-2 trust-card">
                     <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                         <div>
                             <h3 className="font-semibold text-gray-900">Live Clinical Chart</h3>
@@ -128,7 +128,7 @@ export function EmiTerminal() {
                         </div>
                         <span className="text-xs text-gray-400">{voiceTranscript.length} entries</span>
                     </div>
-                    <div className="max-h-[350px] overflow-y-auto p-4">
+                    <div className="max-h-[400px] overflow-y-auto p-4">
                         {voiceTranscript.length > 0 ? (
                             <div className="space-y-3">
                                 {voiceTranscript.map((entry, idx) => (
@@ -164,52 +164,55 @@ export function EmiTerminal() {
                     </div>
                 </div>
 
-                {/* Session Controls */}
-                <div className="trust-card p-4">
-                    {/* Progress */}
-                    <div className="mb-4">
-                        <div className="flex items-center justify-between text-sm mb-2">
-                            <span className="font-medium text-gray-700">Intake Progress</span>
-                            <span className="text-gray-500">{getProgressPercentage(state)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                                className="bg-[#0055A4] h-2 rounded-full transition-all duration-500"
-                                style={{ width: `${getProgressPercentage(state)}%` }}
-                            />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">{getStateLabel(state)}</p>
+                {/* Session Controls - Takes up 1/3 width */}
+                <div className="trust-card">
+                    <div className="px-4 py-3 border-b border-gray-200">
+                        <h3 className="font-semibold text-gray-900">Session Control</h3>
                     </div>
+                    <div className="p-4">
+                        {/* Progress */}
+                        <div className="mb-6">
+                            <div className="flex items-center justify-between text-sm mb-2">
+                                <span className="font-medium text-gray-700">Intake Progress</span>
+                                <span className="text-gray-500">{getProgressPercentage(state)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                    className="bg-[#0055A4] h-2 rounded-full transition-all duration-500"
+                                    style={{ width: `${getProgressPercentage(state)}%` }}
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">{getStateLabel(state)}</p>
+                        </div>
 
-                    {/* Buttons */}
-                    <div className="flex gap-3">
-                        <button
-                            onClick={handleReset}
-                            className="flex-1 py-2 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium transition-colors text-sm"
-                        >
-                            Reset
-                        </button>
-                        {showReport && (
+                        {/* Buttons */}
+                        <div className="space-y-2">
                             <button
-                                onClick={() => setShowReport(false)}
-                                className="flex-1 py-2 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium transition-colors text-sm"
+                                onClick={handleReset}
+                                className="w-full py-2 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium transition-colors text-sm"
                             >
-                                Hide Report
+                                Reset Session
                             </button>
-                        )}
+                            {showReport && (
+                                <button
+                                    onClick={() => setShowReport(false)}
+                                    className="w-full py-2 px-4 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium transition-colors text-sm"
+                                >
+                                    Hide Report
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Report Preview - Full Width */}
             {showReport && (
-                <div className="lg:col-span-2">
-                    <ReportPreview
-                        transcript={transcript}
-                        vitals={vitals}
-                        onClose={() => setShowReport(false)}
-                    />
-                </div>
+                <ReportPreview
+                    transcript={transcript}
+                    vitals={vitals}
+                    onClose={() => setShowReport(false)}
+                />
             )}
         </div>
     );
