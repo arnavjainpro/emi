@@ -1,10 +1,10 @@
 import { expect } from "chai";
+// @ts-ignore - Hardhat Runtime Environment augmented types
 import { ethers } from "hardhat";
-import { VerifiableIntakeProtocol } from "../typechain-types";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("VerifiableIntakeProtocol", function () {
-  let contract: VerifiableIntakeProtocol;
+  let contract: any; // Contract instance
   let admin: SignerWithAddress;
   let officer1: SignerWithAddress;
   let officer2: SignerWithAddress;

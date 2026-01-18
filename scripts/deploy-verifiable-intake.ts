@@ -10,6 +10,7 @@
  *   3. Set VERIFIABLE_INTAKE_ADMIN_ADDRESS in your .env
  */
 
+// @ts-ignore - Hardhat Runtime Environment augmented types
 import { ethers } from "hardhat";
 
 async function main() {
